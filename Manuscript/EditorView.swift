@@ -96,23 +96,13 @@ struct MarkdownPreview: View {
     
     var body: some View {
         ScrollView {
-            if let attributedString = try? NSAttributedString(markdown: content) {
-                Text(AttributedString(attributedString))
-                    .font(.system(size: 16))
-                    .lineSpacing(6)
-                    .multilineTextAlignment(.leading)
-                    .padding(.horizontal, 60)
-                    .padding(.vertical, 20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                Text(content)
-                    .font(.system(size: 16))
-                    .lineSpacing(6)
-                    .multilineTextAlignment(.leading)
-                    .padding(.horizontal, 60)
-                    .padding(.vertical, 20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            Text(try! AttributedString(markdown: content))
+                .font(.system(size: 16))
+                .lineSpacing(6)
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 60)
+                .padding(.vertical, 20)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
