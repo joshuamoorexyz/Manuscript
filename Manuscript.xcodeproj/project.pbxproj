@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		42EAB9F12FA882CC008BAD8C /* Manuscript.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Manuscript.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		42EAC0002FA882CC008BAD8D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -33,6 +34,7 @@
 			isa = PBXGroup;
 			children = (
 				42EAB9F32FA882CC008BAD8C /* Manuscript */,
+				42EAC0002FA882CC008BAD8D /* Assets.xcassets */,
 				42EAB9F22FA882CC008BAD8C /* Products */,
 			);
 			sourceTree = "<group>";
