@@ -2,18 +2,16 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var store: DocumentStore
-    @State private var showSidebar = true
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var isFocusMode = false
     
     var body: some View {
-        NavigationView {
-            if showSidebar && !isFocusMode {
-                SidebarView(isFocusMode: $isFocusMode)
-                    .frame(minWidth: 200, idealWidth: 250, maxWidth: 300)
-            }
-            
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            SidebarView(isFocusMode: $isFocusMode)
+                .frame(minWidth: 200, idealWidth: 250, maxWidth: 300)
+        } detail: {
             if let sheet = store.selectedSheet {
-                EditorView(sheet: sheet, isFocusMode: $isFocusMode)
+                EditorView(sheet: sheet, isFocusMode: $isFocusMode, columnVisibility: $columnVisibility)
                     .id(sheet.id)
             } else {
                 EmptyStateView()
@@ -23,17 +21,21 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button(action: {
-                    showSidebar.toggle()
+                    withAnimation {
+                        if columnVisibility == .all {
+                            columnVisibility = .detailOnly
+                        } else {
+                            columnVisibility = .all
+                        }
+                    }
                 }) {
                     Image(systemName: "sidebar.left")
                 }
             }
             
             ToolbarItem(placement: .automatic) {
-                Button(action: { 
-                    withAnimation {
-                        isFocusMode.toggle()
-                    }
+                Button(action: {
+                    isFocusMode.toggle()
                 }) {
                     Image(systemName: isFocusMode ? "eye.slash" : "eye")
                 }
