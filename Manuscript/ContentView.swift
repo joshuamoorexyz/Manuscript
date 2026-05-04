@@ -14,6 +14,7 @@ struct ContentView: View {
             
             if let sheet = store.selectedSheet {
                 EditorView(sheet: sheet, isFocusMode: $isFocusMode)
+                    .id(sheet.id)
             } else {
                 EmptyStateView()
             }

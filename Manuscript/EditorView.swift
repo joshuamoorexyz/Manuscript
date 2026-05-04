@@ -85,7 +85,7 @@ struct EditorToolbar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(NSColor.windowBackgroundColor))
         .overlay(Divider(), alignment: .bottom)
     }
@@ -96,13 +96,23 @@ struct MarkdownPreview: View {
     
     var body: some View {
         ScrollView {
-            Text(try! .init(markdown: content))
-                .font(.system(size: 16))
-                .lineSpacing(6)
-                .multilineTextAlignment(.leading)
-                .padding(.horizontal, 60)
-                .padding(.vertical, 20)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let attributedString = try? NSAttributedString(markdown: content) {
+                Text(AttributedString(attributedString))
+                    .font(.system(size: 16))
+                    .lineSpacing(6)
+                    .multilineTextAlignment(.leading)
+                    .padding(.horizontal, 60)
+                    .padding(.vertical, 20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(content)
+                    .font(.system(size: 16))
+                    .lineSpacing(6)
+                    .multilineTextAlignment(.leading)
+                    .padding(.horizontal, 60)
+                    .padding(.vertical, 20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
