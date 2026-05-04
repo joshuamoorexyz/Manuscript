@@ -2,40 +2,44 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var store: DocumentStore
+    @State private var showSidebar = true
+    @State private var isFocusMode = false
     
     var body: some View {
         NavigationView {
-            List(store.sheets) { sheet in
-                VStack(alignment: .leading) {
-                    Text(sheet.title)
-                        .font(.headline)
-                    Text(String(sheet.content.prefix(50)))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .onTapGesture {
-                    store.selectedSheet = sheet
-                }
+            if showSidebar && !isFocusMode {
+                SidebarView(isFocusMode: $isFocusMode)
+                    .frame(minWidth: 200, idealWidth: 250, maxWidth: 300)
             }
-            .frame(minWidth: 200)
             
             if let sheet = store.selectedSheet {
-                TextEditor(text: Binding(
-                    get: { sheet.content },
-                    set: { sheet.content = $0 }
-                ))
-                .font(.system(size: 16))
-                .padding()
-                .navigationTitle(sheet.title)
+                EditorView(sheet: sheet, isFocusMode: $isFocusMode)
             } else {
-                Text("Select a sheet")
-                    .foregroundColor(.secondary)
+                EmptyStateView()
             }
         }
+        .navigationTitle("")
         .toolbar {
-            Button(action: { store.createSheet() }) {
-                Image(systemName: "plus")
+            ToolbarItem(placement: .navigation) {
+                Button(action: { showSidebar.toggle() }) {
+                    Image(systemName: "sidebar.left")
+                }
+            }
+            
+            ToolbarItem(placement: .automatic) {
+                Button(action: { isFocusMode.toggle() }) {
+                    Image(systemName: isFocusMode ? "eye.slash" : "eye")
+                }
+                .help("Toggle Focus Mode")
+            }
+            
+            ToolbarItem(placement: .automatic) {
+                Button(action: { store.createSheet() }) {
+                    Image(systemName: "square.and.pencil")
+                }
+                .help("New Sheet")
             }
         }
+        .frame(minWidth: 900, minHeight: 600)
     }
 }
