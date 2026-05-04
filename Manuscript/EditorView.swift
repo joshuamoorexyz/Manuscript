@@ -8,13 +8,15 @@ struct EditorView: View {
     @FocusState private var isEditorFocused: Bool
     
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             if !isFocusMode {
                 EditorToolbar(showPreview: $showPreview)
+                    .frame(maxWidth: .infinity)
             }
             
             if showPreview {
                 MarkdownPreview(content: text)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 TextEditor(text: $text)
                     .font(.system(size: 16))
@@ -32,6 +34,7 @@ struct EditorView: View {
                         sheet.updateTitle()
                     }
                     .disabled(isFocusMode && !NSEvent.modifierFlags.contains(.command))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -93,7 +96,7 @@ struct MarkdownPreview: View {
     
     var body: some View {
         ScrollView {
-            Text(content)
+            Text(try! .init(markdown: content))
                 .font(.system(size: 16))
                 .lineSpacing(6)
                 .multilineTextAlignment(.leading)

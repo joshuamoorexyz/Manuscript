@@ -21,10 +21,8 @@ struct ContentView: View {
         .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                Button(action: { 
-                    withAnimation {
-                        showSidebar.toggle()
-                    }
+                Button(action: {
+                    showSidebar.toggle()
                 }) {
                     Image(systemName: "sidebar.left")
                 }
