@@ -1,5 +1,5 @@
 import Foundation
-import SwiftUI
+import Combine
 
 class DocumentStore: ObservableObject {
     @Published var sheets: [Sheet] = []
