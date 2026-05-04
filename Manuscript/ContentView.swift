@@ -21,13 +21,21 @@ struct ContentView: View {
         .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                Button(action: { showSidebar.toggle() }) {
+                Button(action: { 
+                    withAnimation {
+                        showSidebar.toggle()
+                    }
+                }) {
                     Image(systemName: "sidebar.left")
                 }
             }
             
             ToolbarItem(placement: .automatic) {
-                Button(action: { isFocusMode.toggle() }) {
+                Button(action: { 
+                    withAnimation {
+                        isFocusMode.toggle()
+                    }
+                }) {
                     Image(systemName: isFocusMode ? "eye.slash" : "eye")
                 }
                 .help("Toggle Focus Mode")

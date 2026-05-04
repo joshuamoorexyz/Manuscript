@@ -26,7 +26,7 @@ struct EditorView: View {
                         text = sheet.content
                         isEditorFocused = true
                     }
-                    .onChange(of: text) { newValue in
+                    .onChange(of: text) { _, newValue in
                         sheet.content = newValue
                         sheet.lastModified = Date()
                         sheet.updateTitle()
@@ -82,6 +82,7 @@ struct EditorToolbar: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
         .background(Color(NSColor.windowBackgroundColor))
         .overlay(Divider(), alignment: .bottom)
     }
@@ -100,5 +101,6 @@ struct MarkdownPreview: View {
                 .padding(.vertical, 20)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
