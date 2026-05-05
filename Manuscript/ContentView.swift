@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var store: DocumentStore
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var columnVisibility: NavigationSplitViewVisibility = .detailOnly
     @State private var isFocusMode = false
     
     var body: some View {
@@ -19,6 +19,19 @@ struct ContentView: View {
         }
         .navigationTitle("")
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button(action: {
+                    if columnVisibility == .detailOnly {
+                        columnVisibility = .all
+                    } else {
+                        columnVisibility = .detailOnly
+                    }
+                }) {
+                    Image(systemName: columnVisibility == .detailOnly ? "sidebar.leading" : "sidebar.leading")
+                }
+                .help("Toggle Sidebar")
+            }
+            
             ToolbarItem(placement: .automatic) {
                 Button(action: {
                     isFocusMode.toggle()
