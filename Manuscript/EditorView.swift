@@ -48,40 +48,6 @@ struct EditorView: View {
         .background(Color(NSColor.textBackgroundColor))
         .navigationTitle(sheet.title)
         .toolbar {
-            ToolbarItemGroup(placement: .navigation) {
-                Button(action: { showFormatTools.toggle() }) {
-                    Image(systemName: "textformat")
-                }
-                .help("Format Tools")
-                
-                if showFormatTools {
-                    Button(action: { insertMarkup(before: "**", after: "**") }) {
-                        Image(systemName: "bold")
-                    }
-                    .help("Bold")
-                    
-                    Button(action: { insertMarkup(before: "*", after: "*") }) {
-                        Image(systemName: "italic")
-                    }
-                    .help("Italic")
-                    
-                    Button(action: { insertMarkup(before: "## ", after: "\n") }) {
-                        Image(systemName: "h.square.fill")
-                    }
-                    .help("Heading")
-                    
-                    Button(action: { insertAtLineStart(text: "- ") }) {
-                        Image(systemName: "list.bullet")
-                    }
-                    .help("Bullet List")
-                    
-                    Button(action: { insertAtLineStart(text: "1. ") }) {
-                        Image(systemName: "list.number")
-                    }
-                    .help("Numbered List")
-                }
-            }
-            
             ToolbarItemGroup(placement: .principal) {
                 Button(action: { showAIFeatures.toggle() }) {
                     Image(systemName: "brain")
@@ -150,6 +116,40 @@ struct EditorView: View {
                     }
                     .help("Analyze Plot with AI")
                     .disabled(!aiService.isAvailable || aiService.isGenerating)
+                }
+                
+                Divider()
+                
+                Button(action: { showFormatTools.toggle() }) {
+                    Image(systemName: "textformat")
+                }
+                .help("Format Tools")
+                
+                if showFormatTools {
+                    Button(action: { insertMarkup(before: "**", after: "**") }) {
+                        Image(systemName: "bold")
+                    }
+                    .help("Bold")
+                    
+                    Button(action: { insertMarkup(before: "*", after: "*") }) {
+                        Image(systemName: "italic")
+                    }
+                    .help("Italic")
+                    
+                    Button(action: { insertMarkup(before: "## ", after: "\n") }) {
+                        Image(systemName: "h.square.fill")
+                    }
+                    .help("Heading")
+                    
+                    Button(action: { insertAtLineStart(text: "- ") }) {
+                        Image(systemName: "list.bullet")
+                    }
+                    .help("Bullet List")
+                    
+                    Button(action: { insertAtLineStart(text: "1. ") }) {
+                        Image(systemName: "list.number")
+                    }
+                    .help("Numbered List")
                 }
             }
             
