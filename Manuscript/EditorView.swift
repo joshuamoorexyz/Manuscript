@@ -190,23 +190,18 @@ struct EditorView: View {
         panel.nameFieldStringValue = "\(sheet.title).pdf"
         
         if panel.runModal() == .OK, let url = panel.url {
-            exportAsPDF(to: url)
+            let textView = NSTextView(frame: CGRect(x: 0, y: 0, width: 595, height: 842))
+            textView.string = text.isEmpty ? " " : text
+            textView.font = NSFont.systemFont(ofSize: 12)
+            
+            let printInfo = NSPrintInfo.shared
+            printInfo.jobDisposition = .save
+            printInfo.dictionary()[NSPrintInfo.AttributeKey.jobDisposition] = NSPrintInfo.JobDisposition.save
+            printInfo.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = url
+            
+            let printOperation = NSPrintOperation(view: textView, printInfo: printInfo)
+            printOperation.run()
         }
-    }
-    
-    private func exportAsPDF(to url: URL) {
-        let content = text.isEmpty ? " " : text
-        
-        let attrString = NSMutableAttributedString(string: content)
-        attrString.addAttribute(.font, value: NSFont.systemFont(ofSize: 12), range: NSRange(location: 0, length: attrString.length))
-        
-        let printInfo = NSPrintInfo.shared
-        printInfo.jobDisposition = .save
-        printInfo.dictionary()[NSPrintInfo.AttributeKey.jobDisposition] = NSPrintInfo.JobDisposition.save
-        printInfo.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = url
-        
-        let printOperation = NSPrintOperation(view: NSTextView(frame: .zero), printInfo: printInfo)
-        printOperation.run()
     }
     
     private func insertMarkup(before: String, after: String) {
