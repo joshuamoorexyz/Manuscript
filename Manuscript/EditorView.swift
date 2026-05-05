@@ -1,4 +1,7 @@
 import SwiftUI
+import WebKit
+import PDFKit
+import UniformTypeIdentifiers
 
 struct EditorView: View {
     @ObservedObject var sheet: Sheet
@@ -160,6 +163,13 @@ struct EditorView: View {
                 .toggleStyle(ButtonToggleStyle())
                 .help("Toggle Preview")
             }
+            
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: exportToPDF) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .help("Export to PDF")
+            }
         }
         .sheet(item: $aiAction) { action in
             switch action {
@@ -171,6 +181,114 @@ struct EditorView: View {
                     .environmentObject(aiService)
             }
         }
+    }
+    
+    private func exportToPDF() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = "\(sheet.title).pdf"
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            generatePDF(saveTo: url)
+        }
+    }
+    
+    private func generatePDF(saveTo url: URL) {
+        let html = generateHTMLForPDF(from: text)
+        
+        DispatchQueue.main.async {
+            let webView = WKWebView()
+            webView.loadHTMLString(html, baseURL: nil)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                let config = WKPDFConfiguration()
+                config.rect = CGRect(x: 0, y: 0, width: 595, height: 842)
+                
+                webView.createPDF(configuration: config) { result in
+                    switch result {
+                    case .success(let data):
+                        try? data.write(to: url)
+                    case .failure(let error):
+                        print("PDF export failed: \(error)")
+                    }
+                }
+            }
+        }
+    }
+    
+    private func generateHTMLForPDF(from markdown: String) -> String {
+        let textColor = colorScheme == .dark ? "#e0e0e0" : "#000000"
+        let bgColor = colorScheme == .dark ? "#1e1e1e" : "#ffffff"
+        
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+            <script>
+                window.MathJax = {
+                    tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']] },
+                    svg: { fontCache: 'global' }
+                };
+            </script>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12pt; line-height: 1.6; max-width: 550px; margin: 20px auto; padding: 0 20px; background-color: \(bgColor); color: \(textColor); }
+                h1 { font-size: 1.5em; border-bottom: 1px solid #ccc; }
+                h2 { font-size: 1.3em; }
+                h3 { font-size: 1.1em; }
+                strong { font-weight: bold; }
+                em { font-style: italic; }
+                code { background-color: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+                pre { background-color: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; }
+                pre code { background: none; padding: 0; }
+                blockquote { border-left: 4px solid #ccc; margin: 0; padding-left: 16px; color: #666; }
+                ul, ol { padding-left: 30px; }
+            </style>
+        </head>
+        <body>
+        \(parseMarkdownForPDF(markdown))
+        </body>
+        </html>
+        """
+    }
+    
+    private func parseMarkdownForPDF(_ text: String) -> String {
+        var html = ""
+        let lines = text.components(separatedBy: "\n")
+        
+        for line in lines {
+            if line.hasPrefix("# ") {
+                html += "<h1>\(escapeHTML(String(line.dropFirst(2))))</h1>"
+            } else if line.hasPrefix("## ") {
+                html += "<h2>\(escapeHTML(String(line.dropFirst(3))))</h2>"
+            } else if line.hasPrefix("### ") {
+                html += "<h3>\(escapeHTML(String(line.dropFirst(4))))</h3>"
+            } else if line.hasPrefix("- ") || line.hasPrefix("* ") {
+                html += "<li>\(escapeHTML(String(line.dropFirst(2))))</li>"
+            } else if line.isEmpty {
+                html += "<br>"
+            } else {
+                html += "<p>\(parseInlineForPDF(line))</p>"
+            }
+        }
+        
+        return html
+    }
+    
+    private func parseInlineForPDF(_ text: String) -> String {
+        var result = escapeHTML(text)
+        result = result.replacingOccurrences(of: #"\*\*(.+?)\*\*"#, with: "<strong>$1</strong>", options: .regularExpression)
+        result = result.replacingOccurrences(of: #"\*(.+?)\*"#, with: "<em>$1</em>", options: .regularExpression)
+        return result
+    }
+    
+    private func escapeHTML(_ text: String) -> String {
+        var result = text
+        result = result.replacingOccurrences(of: "&", with: "&amp;")
+        result = result.replacingOccurrences(of: "<", with: "&lt;")
+        result = result.replacingOccurrences(of: ">", with: "&gt;")
+        return result
     }
     
     private func insertMarkup(before: String, after: String) {
@@ -207,76 +325,5 @@ struct EditorView: View {
         
         let selectedRange = textView.selectedRange()
         return selectedRange
-    }
-}
-
-import SwiftUI
-
-struct MarkdownPreview: NSViewRepresentable {
-    let content: String
-    @Environment(\.colorScheme) var colorScheme
-    
-    func makeNSView(context: Context) -> NSScrollView {
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
-        scrollView.drawsBackground = false
-        
-        let textView = NSTextView()
-        textView.isEditable = false
-        textView.isSelectable = true
-        textView.drawsBackground = false
-        textView.font = NSFont.systemFont(ofSize: 16)
-        textView.textContainerInset = NSSize(width: 20, height: 10)
-        textView.isRichText = true
-        
-        scrollView.documentView = textView
-        return scrollView
-    }
-    
-    func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        guard let textView = scrollView.documentView as? NSTextView else { return }
-        
-        let attrString = NSMutableAttributedString()
-        let lines = content.components(separatedBy: "\n")
-        let defaultFont = NSFont.systemFont(ofSize: 16)
-        let textColor = colorScheme == .dark ? NSColor.white : NSColor.black
-        
-        for line in lines {
-            if line.hasPrefix("## ") {
-                let text = String(line.dropFirst(3))
-                let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.boldSystemFont(ofSize: 20), .foregroundColor: textColor]
-                attrString.append(NSAttributedString(string: text + "\n", attributes: attrs))
-            } else if line.hasPrefix("# ") {
-                let text = String(line.dropFirst(2))
-                let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.boldSystemFont(ofSize: 24), .foregroundColor: textColor]
-                attrString.append(NSAttributedString(string: text + "\n", attributes: attrs))
-            } else if line.isEmpty {
-                attrString.append(NSAttributedString(string: "\n"))
-            } else {
-                let attrs: [NSAttributedString.Key: Any] = [.font: defaultFont, .foregroundColor: textColor]
-                let parsed = parseInlineMarkdown(line, baseAttrs: attrs)
-                attrString.append(parsed)
-                attrString.append(NSAttributedString(string: "\n"))
-            }
-        }
-        
-        textView.textStorage?.setAttributedString(attrString)
-    }
-    
-    private func parseInlineMarkdown(_ text: String, baseAttrs: [NSAttributedString.Key: Any]) -> NSAttributedString {
-        let result = NSMutableAttributedString(string: text, attributes: baseAttrs)
-        
-        // Bold **text**
-        if let regex = try? NSRegularExpression(pattern: "\\*{2}(.*?)\\*{2}") {
-            let nsRange = NSRange(text.startIndex..., in: text)
-            for match in regex.matches(in: text, range: nsRange) {
-                if match.numberOfRanges >= 2 {
-                    let contentRange = match.range(at: 1)
-                    result.addAttribute(.font, value: NSFont.boldSystemFont(ofSize: 16), range: contentRange)
-                }
-            }
-        }
-        
-        return result
     }
 }
