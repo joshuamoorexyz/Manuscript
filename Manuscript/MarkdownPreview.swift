@@ -89,7 +89,7 @@ struct MarkdownPreview: NSViewRepresentable {
         var html = ""
         let lines = text.components(separatedBy: "\n")
         var inCodeBlock = false
-        var inList = false
+        var listType: String? = nil
         
         for line in lines {
             if line.hasPrefix("```") {
@@ -109,28 +109,33 @@ struct MarkdownPreview: NSViewRepresentable {
             }
             
             if line.hasPrefix("# ") {
+                if let type = listType { html += "</\(type)>\n"; listType = nil }
                 html += "<h1>\(parseInline(String(line.dropFirst(2))))</h1>\n"
             } else if line.hasPrefix("## ") {
+                if let type = listType { html += "</\(type)>\n"; listType = nil }
                 html += "<h2>\(parseInline(String(line.dropFirst(3))))</h2>\n"
             } else if line.hasPrefix("### ") {
+                if let type = listType { html += "</\(type)>\n"; listType = nil }
                 html += "<h3>\(parseInline(String(line.dropFirst(4))))</h3>\n"
             } else if line.hasPrefix("- ") || line.hasPrefix("* ") {
-                if !inList { html += "<ul>\n"; inList = true }
+                if listType != "ul" { if let type = listType { html += "</\(type)>\n" }; html += "<ul>\n"; listType = "ul" }
                 html += "<li>\(parseInline(String(line.dropFirst(2))))</li>\n"
             } else if let match = line.range(of: #"^\d+\.\s"#, options: .regularExpression) {
-                if !inList { html += "<ol>\n"; inList = true }
+                if listType != "ol" { if let type = listType { html += "</\(type)>\n" }; html += "<ol>\n"; listType = "ol" }
                 html += "<li>\(parseInline(String(line[match.upperBound...])))</li>\n"
             } else if line.isEmpty {
-                if inList { html += (inList ? "</ul>\n" : "</ol>\n"); inList = false }
+                if let type = listType { html += "</\(type)>\n"; listType = nil }
                 html += "<br>\n"
             } else if line.hasPrefix("> ") {
+                if let type = listType { html += "</\(type)>\n"; listType = nil }
                 html += "<blockquote>\(parseInline(String(line.dropFirst(2))))</blockquote>\n"
             } else {
+                if let type = listType { html += "</\(type)>\n"; listType = nil }
                 html += "<p>\(parseInline(line))</p>\n"
             }
         }
         
-        if inList { html += (inList ? "</ul>\n" : "</ol>\n") }
+        if let type = listType { html += "</\(type)>\n" }
         return html
     }
     
