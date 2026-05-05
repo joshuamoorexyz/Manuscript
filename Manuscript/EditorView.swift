@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 import PDFKit
 import UniformTypeIdentifiers
+import ObjectiveC
 
 struct EditorView: View {
     @ObservedObject var sheet: Sheet
@@ -185,31 +186,17 @@ struct EditorView: View {
     
     private func exportToPDF() {
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.pdf]
+        panel.allowedContentTypes = [UTType.pdf]
         panel.nameFieldStringValue = "\(sheet.title).pdf"
         
         if panel.runModal() == .OK, let url = panel.url {
-            generatePDF(saveTo: url)
-        }
-    }
-    
-    private func generatePDF(saveTo url: URL) {
-        let html = generateHTMLForPDF(from: text)
-        
-        let webView = WKWebView()
-        webView.loadHTMLString(html, baseURL: nil)
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let config = WKPDFConfiguration()
-            config.rect = CGRect(x: 0, y: 0, width: 595, height: 842)
-            
-            webView.createPDF(configuration: config) { result in
-                switch result {
-                case .success(let data):
-                    try? data.write(to: url)
-                case .failure(let error):
-                    print("PDF export failed: \(error)")
-                }
+            let html = generateHTMLForPDF(from: text)
+            do {
+                let data = html.data(using: .utf8) ?? Data()
+                try data.write(to: url)
+                print("PDF saved to \(url.path)")
+            } catch {
+                print("PDF export failed: \(error)")
             }
         }
     }
@@ -323,5 +310,30 @@ struct EditorView: View {
         
         let selectedRange = textView.selectedRange()
         return selectedRange
+    }
+}
+
+class PDFDelegate: NSObject, WKNavigationDelegate {
+    let url: URL
+    
+    init(url: URL) {
+        self.url = url
+        super.init()
+    }
+    
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let config = WKPDFConfiguration()
+            config.rect = CGRect(x: 0, y: 0, width: 595, height: 842)
+            
+            webView.createPDF(configuration: config) { result in
+                switch result {
+                case .success(let data):
+                    try? data.write(to: self.url)
+                case .failure(let error):
+                    print("PDF export failed: \(error)")
+                }
+            }
+        }
     }
 }
