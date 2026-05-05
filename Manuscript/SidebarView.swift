@@ -2,8 +2,10 @@ import SwiftUI
 
 struct SidebarView: View {
     @EnvironmentObject var store: DocumentStore
+    @EnvironmentObject var aiService: AIService
     @Binding var isFocusMode: Bool
     @State private var searchText = ""
+    @State private var showAIAnalysis = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -32,6 +34,30 @@ struct SidebarView: View {
             .listStyle(SidebarListStyle())
             
             Divider()
+            
+            if let selectedSheet = store.selectedSheet, aiService.isAvailable {
+                Button(action: { showAIAnalysis = true }) {
+                    Label("Analyze with AI", systemImage: "chart.bar")
+                }
+                .buttonStyle(BorderlessButtonStyle())
+                .padding(8)
+                .sheet(isPresented: $showAIAnalysis) {
+                    AIAnalysisView(sheet: selectedSheet)
+                        .environmentObject(aiService)
+                }
+                
+                NavigationLink {
+                    AIChatView(sheet: selectedSheet)
+                        .environmentObject(aiService)
+                } label: {
+                    Label("AI Chat", systemImage: "message")
+                }
+                .buttonStyle(BorderlessButtonStyle())
+                .padding(8)
+                
+                AIStatsView(sheet: selectedSheet)
+                    .padding(.horizontal, 8)
+            }
             
             HStack {
                 Button(action: { store.createSheet() }) {

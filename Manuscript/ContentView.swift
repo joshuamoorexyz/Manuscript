@@ -14,25 +14,11 @@ struct ContentView: View {
                 EditorView(sheet: sheet, isFocusMode: $isFocusMode, columnVisibility: $columnVisibility)
                     .id(sheet.id)
             } else {
-                EmptyStateView()
+                EmptyEditorView()
             }
         }
         .navigationTitle("")
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button(action: {
-                    withAnimation {
-                        if columnVisibility == .all {
-                            columnVisibility = .detailOnly
-                        } else {
-                            columnVisibility = .all
-                        }
-                    }
-                }) {
-                    Image(systemName: "sidebar.left")
-                }
-            }
-            
             ToolbarItem(placement: .automatic) {
                 Button(action: {
                     isFocusMode.toggle()
@@ -50,5 +36,6 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 900, minHeight: 600)
+        .toolbarRole(.editor)
     }
 }
