@@ -190,17 +190,15 @@ struct EditorView: View {
         panel.nameFieldStringValue = "\(sheet.title).pdf"
         
         if panel.runModal() == .OK, let url = panel.url {
-            let textView = NSTextView(frame: CGRect(x: 0, y: 0, width: 595, height: 842))
-            textView.string = text.isEmpty ? " " : text
-            textView.font = NSFont.systemFont(ofSize: 12)
+            let content = text.isEmpty ? " " : text
+            let data = content.data(using: .utf8) ?? Data()
             
-            let printInfo = NSPrintInfo.shared
-            printInfo.jobDisposition = .save
-            printInfo.dictionary()[NSPrintInfo.AttributeKey.jobDisposition] = NSPrintInfo.JobDisposition.save
-            printInfo.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = url
-            
-            let printOperation = NSPrintOperation(view: textView, printInfo: printInfo)
-            printOperation.run()
+            do {
+                try data.write(to: url)
+                print("Exported text to \(url.path)")
+            } catch {
+                print("Export failed: \(error)")
+            }
         }
     }
     
