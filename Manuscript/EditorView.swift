@@ -196,21 +196,19 @@ struct EditorView: View {
     private func generatePDF(saveTo url: URL) {
         let html = generateHTMLForPDF(from: text)
         
-        DispatchQueue.main.async {
-            let webView = WKWebView()
-            webView.loadHTMLString(html, baseURL: nil)
+        let webView = WKWebView()
+        webView.loadHTMLString(html, baseURL: nil)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let config = WKPDFConfiguration()
+            config.rect = CGRect(x: 0, y: 0, width: 595, height: 842)
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                let config = WKPDFConfiguration()
-                config.rect = CGRect(x: 0, y: 0, width: 595, height: 842)
-                
-                webView.createPDF(configuration: config) { result in
-                    switch result {
-                    case .success(let data):
-                        try? data.write(to: url)
-                    case .failure(let error):
-                        print("PDF export failed: \(error)")
-                    }
+            webView.createPDF(configuration: config) { result in
+                switch result {
+                case .success(let data):
+                    try? data.write(to: url)
+                case .failure(let error):
+                    print("PDF export failed: \(error)")
                 }
             }
         }
