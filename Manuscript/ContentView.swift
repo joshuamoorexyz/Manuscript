@@ -18,20 +18,8 @@ struct ContentView: View {
             }
         }
         .navigationTitle("")
+        .navigationSplitViewStyle(.balanced)
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button(action: {
-                    if columnVisibility == .detailOnly {
-                        columnVisibility = .all
-                    } else {
-                        columnVisibility = .detailOnly
-                    }
-                }) {
-                    Image(systemName: columnVisibility == .detailOnly ? "sidebar.leading" : "sidebar.leading")
-                }
-                .help("Toggle Sidebar")
-            }
-            
             ToolbarItem(placement: .automatic) {
                 Button(action: {
                     isFocusMode.toggle()
@@ -49,6 +37,5 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 900, minHeight: 600)
-        .toolbarRole(.editor)
     }
 }

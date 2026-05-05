@@ -21,7 +21,6 @@ struct ManuscriptApp: App {
                 .frame(minWidth: 900, minHeight: 600)
         }
         .commands {
-            SidebarCommands()
             TextEditingCommands()
         }
         .windowStyle(.titleBar)
