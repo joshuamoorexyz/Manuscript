@@ -190,88 +190,23 @@ struct EditorView: View {
         panel.nameFieldStringValue = "\(sheet.title).pdf"
         
         if panel.runModal() == .OK, let url = panel.url {
-            let html = generateHTMLForPDF(from: text)
-            let webView = WKWebView()
-            let delegate = ExportDelegate(url: url)
-            webView.navigationDelegate = delegate
-            objc_setAssociatedObject(webView, "exportDelegate", delegate, .OBJC_ASSOCIATION_RETAIN)
-            webView.loadHTMLString(html, baseURL: nil)
+            exportAsPDF(to: url)
         }
     }
     
-    private func generateHTMLForPDF(from markdown: String) -> String {
-        let textColor = colorScheme == .dark ? "#e0e0e0" : "#000000"
-        let bgColor = colorScheme == .dark ? "#1e1e1e" : "#ffffff"
+    private func exportAsPDF(to url: URL) {
+        let content = text.isEmpty ? " " : text
         
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-            <script>
-                window.MathJax = {
-                    tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']] },
-                    svg: { fontCache: 'global' }
-                };
-            </script>
-            <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12pt; line-height: 1.6; max-width: 550px; margin: 20px auto; padding: 0 20px; background-color: \(bgColor); color: \(textColor); }
-                h1 { font-size: 1.5em; border-bottom: 1px solid #ccc; }
-                h2 { font-size: 1.3em; }
-                h3 { font-size: 1.1em; }
-                strong { font-weight: bold; }
-                em { font-style: italic; }
-                code { background-color: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
-                pre { background-color: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; }
-                pre code { background: none; padding: 0; }
-                blockquote { border-left: 4px solid #ccc; margin: 0; padding-left: 16px; color: #666; }
-                ul, ol { padding-left: 30px; }
-            </style>
-        </head>
-        <body>
-        \(parseMarkdownForPDF(markdown))
-        </body>
-        </html>
-        """
-    }
-    
-    private func parseMarkdownForPDF(_ text: String) -> String {
-        var html = ""
-        let lines = text.components(separatedBy: "\n")
+        let attrString = NSMutableAttributedString(string: content)
+        attrString.addAttribute(.font, value: NSFont.systemFont(ofSize: 12), range: NSRange(location: 0, length: attrString.length))
         
-        for line in lines {
-            if line.hasPrefix("# ") {
-                html += "<h1>\(escapeHTML(String(line.dropFirst(2))))</h1>"
-            } else if line.hasPrefix("## ") {
-                html += "<h2>\(escapeHTML(String(line.dropFirst(3))))</h2>"
-            } else if line.hasPrefix("### ") {
-                html += "<h3>\(escapeHTML(String(line.dropFirst(4))))</h3>"
-            } else if line.hasPrefix("- ") || line.hasPrefix("* ") {
-                html += "<li>\(escapeHTML(String(line.dropFirst(2))))</li>"
-            } else if line.isEmpty {
-                html += "<br>"
-            } else {
-                html += "<p>\(parseInlineForPDF(line))</p>"
-            }
-        }
+        let printInfo = NSPrintInfo.shared
+        printInfo.jobDisposition = .save
+        printInfo.dictionary()[NSPrintInfo.AttributeKey.jobDisposition] = NSPrintInfo.JobDisposition.save
+        printInfo.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = url
         
-        return html
-    }
-    
-    private func parseInlineForPDF(_ text: String) -> String {
-        var result = escapeHTML(text)
-        result = result.replacingOccurrences(of: #"\*\*(.+?)\*\*"#, with: "<strong>$1</strong>", options: .regularExpression)
-        result = result.replacingOccurrences(of: #"\*(.+?)\*"#, with: "<em>$1</em>", options: .regularExpression)
-        return result
-    }
-    
-    private func escapeHTML(_ text: String) -> String {
-        var result = text
-        result = result.replacingOccurrences(of: "&", with: "&amp;")
-        result = result.replacingOccurrences(of: "<", with: "&lt;")
-        result = result.replacingOccurrences(of: ">", with: "&gt;")
-        return result
+        let printOperation = NSPrintOperation(view: NSTextView(frame: .zero), printInfo: printInfo)
+        printOperation.run()
     }
     
     private func insertMarkup(before: String, after: String) {
@@ -308,31 +243,5 @@ struct EditorView: View {
         
         let selectedRange = textView.selectedRange()
         return selectedRange
-    }
-}
-
-class ExportDelegate: NSObject, WKNavigationDelegate {
-    let url: URL
-    
-    init(url: URL) {
-        self.url = url
-        super.init()
-    }
-    
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            let config = WKPDFConfiguration()
-            config.rect = CGRect(x: 0, y: 0, width: 595, height: 842)
-            
-            webView.createPDF(configuration: config) { result in
-                switch result {
-                case .success(let data):
-                    try? data.write(to: self.url)
-                    print("PDF exported to \(self.url.path)")
-                case .failure(let error):
-                    print("PDF export failed: \(error)")
-                }
-            }
-        }
     }
 }
