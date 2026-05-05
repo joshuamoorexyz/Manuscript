@@ -190,16 +190,12 @@ struct EditorView: View {
         panel.nameFieldStringValue = "\(sheet.title).pdf"
         
         if panel.runModal() == .OK, let url = panel.url {
-            let textView = NSTextView(frame: CGRect(x: 0, y: 0, width: 595, height: 842))
-            textView.string = text.isEmpty ? " " : text
-            textView.font = NSFont.systemFont(ofSize: 12)
-            
-            let data = textView.dataWithPDF(inside: textView.bounds)
+            let content = text.isEmpty ? " " : text
             do {
-                try data.write(to: url)
-                print("PDF exported to \(url.path)")
+                try content.write(to: url, atomically: true, encoding: .utf8)
+                print("Exported to \(url.path)")
             } catch {
-                print("PDF export failed: \(error)")
+                print("Export failed: \(error)")
             }
         }
     }
