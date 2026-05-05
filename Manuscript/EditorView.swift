@@ -191,13 +191,11 @@ struct EditorView: View {
         
         if panel.runModal() == .OK, let url = panel.url {
             let html = generateHTMLForPDF(from: text)
-            do {
-                let data = html.data(using: .utf8) ?? Data()
-                try data.write(to: url)
-                print("PDF saved to \(url.path)")
-            } catch {
-                print("PDF export failed: \(error)")
-            }
+            let webView = WKWebView()
+            let delegate = ExportDelegate(url: url)
+            webView.navigationDelegate = delegate
+            objc_setAssociatedObject(webView, "exportDelegate", delegate, .OBJC_ASSOCIATION_RETAIN)
+            webView.loadHTMLString(html, baseURL: nil)
         }
     }
     
@@ -313,7 +311,7 @@ struct EditorView: View {
     }
 }
 
-class PDFDelegate: NSObject, WKNavigationDelegate {
+class ExportDelegate: NSObject, WKNavigationDelegate {
     let url: URL
     
     init(url: URL) {
@@ -330,6 +328,7 @@ class PDFDelegate: NSObject, WKNavigationDelegate {
                 switch result {
                 case .success(let data):
                     try? data.write(to: self.url)
+                    print("PDF exported to \(self.url.path)")
                 case .failure(let error):
                     print("PDF export failed: \(error)")
                 }
