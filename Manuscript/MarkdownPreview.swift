@@ -1,158 +1,226 @@
 import SwiftUI
-import WebKit
 
-struct MarkdownPreview: NSViewRepresentable {
+struct MarkdownPreview: View {
     let content: String
     @Environment(\.colorScheme) var colorScheme
     
-    func makeNSView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        webView.setValue(false, forKey: "drawsBackground")
-        return webView
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(parseMarkdown(content), id: \.id) { block in
+                    renderBlock(block)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+        }
+        .background(colorScheme == .dark ? Color(hex: 0x1e1e1e) : Color(NSColor.textBackgroundColor))
     }
     
-    func updateNSView(_ webView: WKWebView, context: Context) {
-        let html = generateHTML(from: content)
-        webView.loadHTMLString(html, baseURL: nil)
+    @ViewBuilder
+    private func renderBlock(_ block: MarkdownBlock) -> some View {
+        switch block {
+        case .heading(let level, let text):
+            renderInlineText(text)
+                .font(headingFont(for: level))
+                .fontWeight(headingWeight(for: level))
+                .padding(.top, level == 1 ? 8 : 4)
+                .padding(.bottom, 2)
+                .overlay(alignment: .bottom) {
+                    if level == 1 {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 1)
+                    }
+                }
+        case .paragraph(let text):
+            renderInlineText(text)
+                .lineSpacing(6)
+        case .codeBlock(let code):
+            Text(code)
+                .font(.system(size: 14, design: .monospaced))
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: colorScheme == .dark ? 0x2d2d2d : 0xf5f5f5))
+                .cornerRadius(6)
+        case .blockquote(let text):
+            renderInlineText(text)
+                .padding(.leading, 16)
+                .overlay(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.gray)
+                        .frame(width: 4)
+                }
+        case .bulletList(let items):
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(items, id: \.self) { item in
+                    HStack(alignment: .top, spacing: 4) {
+                        Text("•")
+                        renderInlineText(item)
+                    }
+                }
+            }
+            .padding(.leading, 20)
+        case .numberedList(let items):
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    HStack(alignment: .top, spacing: 4) {
+                        Text("\(index + 1).")
+                        renderInlineText(item)
+                    }
+                }
+            }
+            .padding(.leading, 20)
+        case .empty:
+            Spacer()
+                .frame(height: 12)
+        }
     }
     
-    private func generateHTML(from markdown: String) -> String {
-        let isDark = colorScheme == .dark
-        let bgColor = isDark ? "#1e1e1e" : "#ffffff"
-        let textColor = isDark ? "#e0e0e0" : "#000000"
-        let codeBg = isDark ? "#2d2d2d" : "#f5f5f5"
-        
-        var html = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-            <script>
-                window.MathJax = {
-                    tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']] },
-                    svg: { fontCache: 'global' }
-                };
-            </script>
-            <style>
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                    font-size: 16px;
-                    line-height: 1.6;
-                    max-width: 750px;
-                    margin: 20px auto;
-                    padding: 0 20px;
-                    background-color: \(bgColor);
-                    color: \(textColor);
-                }
-                h1 { font-size: 2em; margin-top: 0.5em; border-bottom: 1px solid #ccc; }
-                h2 { font-size: 1.5em; margin-top: 1em; }
-                h3 { font-size: 1.17em; }
-                strong { font-weight: bold; }
-                em { font-style: italic; }
-                code {
-                    background-color: \(codeBg);
-                    padding: 2px 6px;
-                    border-radius: 3px;
-                    font-family: 'SF Mono', Monaco, monospace;
-                    font-size: 14px;
-                }
-                pre {
-                    background-color: \(codeBg);
-                    padding: 12px;
-                    border-radius: 6px;
-                    overflow-x: auto;
-                }
-                pre code { background: none; padding: 0; }
-                blockquote {
-                    border-left: 4px solid #ccc;
-                    margin: 0;
-                    padding-left: 16px;
-                    color: #666;
-                }
-                ul, ol { padding-left: 30px; }
-                a { color: #007AFF; text-decoration: none; }
-                img { max-width: 100%; }
-            </style>
-        </head>
-        <body>
-        """
-        
-        html += parseMarkdown(markdown)
-        html += "\n</body>\n</html>"
-        return html
+    @ViewBuilder
+    private func renderInlineText(_ text: String) -> some View {
+        if text.contains("**") || text.contains("*") || text.contains("`") || text.contains("[") {
+            Text(try! AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+        } else {
+            Text(text)
+        }
     }
     
-    private func parseMarkdown(_ text: String) -> String {
-        var html = ""
+    private func headingFont(for level: Int) -> Font {
+        switch level {
+        case 1: return .system(size: 32)
+        case 2: return .system(size: 24)
+        case 3: return .system(size: 20)
+        default: return .system(size: 16)
+        }
+    }
+    
+    private func headingWeight(for level: Int) -> Font.Weight {
+        level <= 2 ? .bold : .semibold
+    }
+    
+    private func parseMarkdown(_ text: String) -> [MarkdownBlock] {
+        var blocks: [MarkdownBlock] = []
         let lines = text.components(separatedBy: "\n")
+        var currentParagraph: [String] = []
         var inCodeBlock = false
-        var listType: String? = nil
+        var codeLines: [String] = []
+        var inBulletList = false
+        var bulletItems: [String] = []
+        var inNumberedList = false
+        var numberedItems: [String] = []
+        
+        func flushParagraph() {
+            if !currentParagraph.isEmpty {
+                blocks.append(.paragraph(currentParagraph.joined(separator: " ")))
+                currentParagraph.removeAll()
+            }
+        }
+        
+        func flushLists() {
+            if inBulletList {
+                blocks.append(.bulletList(bulletItems))
+                bulletItems.removeAll()
+                inBulletList = false
+            }
+            if inNumberedList {
+                blocks.append(.numberedList(numberedItems))
+                numberedItems.removeAll()
+                inNumberedList = false
+            }
+        }
         
         for line in lines {
             if line.hasPrefix("```") {
                 if inCodeBlock {
-                    html += "</pre>\n"
+                    blocks.append(.codeBlock(codeLines.joined(separator: "\n")))
+                    codeLines.removeAll()
                     inCodeBlock = false
                 } else {
-                    html += "<pre><code>"
+                    flushParagraph()
+                    flushLists()
                     inCodeBlock = true
                 }
                 continue
             }
             
             if inCodeBlock {
-                html += escapeHTML(line) + "\n"
+                codeLines.append(line)
                 continue
             }
             
             if line.hasPrefix("# ") {
-                if let type = listType { html += "</\(type)>\n"; listType = nil }
-                html += "<h1>\(parseInline(String(line.dropFirst(2))))</h1>\n"
+                flushParagraph()
+                flushLists()
+                blocks.append(.heading(1, String(line.dropFirst(2))))
             } else if line.hasPrefix("## ") {
-                if let type = listType { html += "</\(type)>\n"; listType = nil }
-                html += "<h2>\(parseInline(String(line.dropFirst(3))))</h2>\n"
+                flushParagraph()
+                flushLists()
+                blocks.append(.heading(2, String(line.dropFirst(3))))
             } else if line.hasPrefix("### ") {
-                if let type = listType { html += "</\(type)>\n"; listType = nil }
-                html += "<h3>\(parseInline(String(line.dropFirst(4))))</h3>\n"
+                flushParagraph()
+                flushLists()
+                blocks.append(.heading(3, String(line.dropFirst(4))))
             } else if line.hasPrefix("- ") || line.hasPrefix("* ") {
-                if listType != "ul" { if let type = listType { html += "</\(type)>\n" }; html += "<ul>\n"; listType = "ul" }
-                html += "<li>\(parseInline(String(line.dropFirst(2))))</li>\n"
+                flushParagraph()
+                if !inBulletList { inBulletList = true }
+                bulletItems.append(String(line.dropFirst(2)))
             } else if let match = line.range(of: #"^\d+\.\s"#, options: .regularExpression) {
-                if listType != "ol" { if let type = listType { html += "</\(type)>\n" }; html += "<ol>\n"; listType = "ol" }
-                html += "<li>\(parseInline(String(line[match.upperBound...])))</li>\n"
-            } else if line.isEmpty {
-                if let type = listType { html += "</\(type)>\n"; listType = nil }
-                html += "<br>\n"
+                flushParagraph()
+                if !inNumberedList { inNumberedList = true }
+                numberedItems.append(String(line[match.upperBound...]))
             } else if line.hasPrefix("> ") {
-                if let type = listType { html += "</\(type)>\n"; listType = nil }
-                html += "<blockquote>\(parseInline(String(line.dropFirst(2))))</blockquote>\n"
+                flushParagraph()
+                flushLists()
+                blocks.append(.blockquote(String(line.dropFirst(2))))
+            } else if line.isEmpty {
+                flushParagraph()
+                flushLists()
+                blocks.append(.empty)
             } else {
-                if let type = listType { html += "</\(type)>\n"; listType = nil }
-                html += "<p>\(parseInline(line))</p>\n"
+                if inBulletList || inNumberedList {
+                    flushLists()
+                }
+                currentParagraph.append(line)
             }
         }
         
-        if let type = listType { html += "</\(type)>\n" }
-        return html
+        flushParagraph()
+        flushLists()
+        
+        return blocks
     }
+}
+
+enum MarkdownBlock {
+    case heading(Int, String)
+    case paragraph(String)
+    case codeBlock(String)
+    case blockquote(String)
+    case bulletList([String])
+    case numberedList([String])
+    case empty
     
-    private func parseInline(_ text: String) -> String {
-        var result = escapeHTML(text)
-        result = result.replacingOccurrences(of: #"\*\*(.+?)\*\*"#, with: "<strong>$1</strong>", options: .regularExpression)
-        result = result.replacingOccurrences(of: #"\*(.+?)\*"#, with: "<em>$1</em>", options: .regularExpression)
-        result = result.replacingOccurrences(of: #"`(.+?)`"#, with: "<code>$1</code>", options: .regularExpression)
-        result = result.replacingOccurrences(of: #"\[(.+?)\]\((.+?)\)"#, with: "<a href=\"$2\">$1</a>", options: .regularExpression)
-        return result
+    var id: String {
+        switch self {
+        case .heading(let level, let text): return "h\(level)-\(text)"
+        case .paragraph(let text): return "p-\(text)"
+        case .codeBlock(let code): return "code-\(code)"
+        case .blockquote(let text): return "quote-\(text)"
+        case .bulletList(let items): return "ul-\(items.joined())"
+        case .numberedList(let items): return "ol-\(items.joined())"
+        case .empty: return "empty-\(UUID())"
+        }
     }
-    
-    private func escapeHTML(_ text: String) -> String {
-        var result = text
-        result = result.replacingOccurrences(of: "&", with: "&amp;")
-        result = result.replacingOccurrences(of: "<", with: "&lt;")
-        result = result.replacingOccurrences(of: ">", with: "&gt;")
-        return result
+}
+
+extension Color {
+    init(hex: Int) {
+        self.init(
+            red: Double((hex >> 16) & 0xFF) / 255.0,
+            green: Double((hex >> 8) & 0xFF) / 255.0,
+            blue: Double(hex & 0xFF) / 255.0
+        )
     }
 }

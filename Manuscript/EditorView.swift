@@ -22,7 +22,7 @@ struct EditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             if showPreview {
-                MarkdownPreview(content: text)
+                MarkdownPreview(content: sheet.content)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 TextEditor(text: $text)
